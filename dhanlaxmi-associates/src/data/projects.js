@@ -3,14 +3,13 @@ export const projects = [
   {
     slug: 'om-building',
     name: 'OM Building',
-    location: 'CTS 214, Near Ideal Colony Metro, Erandwane, Pune 411004',
-    area: 'Kothrud',
+    location: 'Pathwardhan Baug, Pune',
+    area: 'Pathwardhan Baug',
     reraNumber: 'P52100099881',
     type: 'Residential',
-    unitTypes: ['2BHK', '3BHK', '4BHK'],
-    unitSize: '2BHK / 3BHK / 4BHK',
+    unitTypes: ['2BHK', '3BHK'],
+    unitSize: '2BHK / 3BHK',
     status: 'Ongoing',
-    priceLabel: 'Starting from ₹1.25 Cr*',
     availability: 'Limited inventory',
     tagline: 'Signature living with timeless detailing.',
     brochureUrl: '#',
@@ -67,10 +66,10 @@ export const projects = [
       },
     ],
     gallery: [
-      "/images/project_hero.png",
-      "/images/gallery_1.png",
-      "/images/gallery_2.png",
-      "/images/gallery_3.png",
+      "/images/building_1.jpg",
+      "/images/building_2.jpg",
+      "/images/building_3.jpg",
+      "/images/amenity_terrace.jpg",
     ]
   },
 ]

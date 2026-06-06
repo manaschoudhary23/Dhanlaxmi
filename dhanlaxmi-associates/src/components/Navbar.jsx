@@ -1,205 +1,161 @@
-import { Link, NavLink } from 'react-router-dom'
-import { motion, useScroll, useTransform } from 'framer-motion'
-import { useEffect, useRef, useState } from 'react'
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const navItems = [
-  { to: '/',                   label: 'Home' },
-  { to: '/about',              label: 'About' },
-  { to: '/ongoing-projects',   label: 'Ongoing Projects' },
-  { to: '/completed-projects', label: 'Completed Projects' },
-  { to: '/gallery',            label: 'Gallery' },
-  { to: '/contact',            label: 'Contact' },
-]
+const navLinks = [
+  { label: 'Home',     href: '/' },
+  { label: 'Projects', href: '/projects' },
+  { label: 'Gallery',  href: '/gallery' },
+  { label: 'About',    href: '/about' },
+  { label: 'Contact',  href: '/contact' },
+];
 
-export function Navbar({ onMenu, onEnquire }) {
-  const [scrollY, setScrollY] = useState(0)
-  const [showNav, setShowNav] = useState(true)
+export function Navbar() {
+  const [scrolled, setScrolled]   = useState(false);
+  const [menuOpen, setMenuOpen]   = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    let lastY = window.scrollY
-    const onScroll = () => {
-      const y = window.scrollY
-      setScrollY(y)
-      if (y < 80) {
-        setShowNav(true)
-      } else if (y > lastY + 4) {
-        setShowNav(false)
-      } else if (y < lastY - 4) {
-        setShowNav(true)
-      }
-      lastY = y
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-  // Transition thresholds
-  const START = 30
-  const END = 160
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
-  // Scroll progress 0→1 over [START, END] range
-  const progress = Math.min(1, Math.max(0, (scrollY - START) / (END - START)))
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
 
-  // Background opacity: 0 at top → 0.92 at END
-  const bgAlpha = progress * 0.92
-
-  // Text brightness: white (255) at top → charcoal at END
-  const isScrolled = scrollY > END
-
-  // Gold separator line under logo appears gradually
-  const dividerOpacity = progress
+  const isHome = location.pathname === '/';
+  const alwaysDark = !isHome;
 
   return (
-    <motion.header
-      className="fixed left-0 right-0 top-0 z-50"
-      initial={{ y: -80, opacity: 0 }}
-      animate={{ y: showNav ? 0 : -90, opacity: showNav ? 1 : 0.98 }}
-      transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {/* Dynamic glass background */}
-      <div
-        className="absolute inset-0 transition-none"
-        style={{
-          background: `rgba(247, 245, 242, ${bgAlpha})`,
-          backdropFilter: progress > 0.1 ? `blur(${progress * 22}px) saturate(${1 + progress * 0.6})` : 'none',
-          WebkitBackdropFilter: progress > 0.1 ? `blur(${progress * 22}px) saturate(${1 + progress * 0.6})` : 'none',
-          borderBottom: `1px solid rgba(198, 166, 106, ${progress * 0.2})`,
-          boxShadow: progress > 0.4 ? `0 4px 30px rgba(44, 40, 30, ${progress * 0.08})` : 'none',
-        }}
-      />
-
-      <div className="container-x relative flex h-[72px] items-center justify-between">
-
-        {/* ── Logo ── */}
-        <Link to="/" className="group flex items-center gap-3 py-2" aria-label="Dhanlaxmi Associates — Home">
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))' }}
-          >
-            <span className="text-xs font-bold text-white" style={{ fontFamily: 'Cinzel, serif' }}>D</span>
-          </div>
-
-          <div className="relative flex flex-col leading-none">
-            <span
-              className="text-[0.58rem] font-medium tracking-[0.32em] transition-colors duration-300"
-              style={{ color: isScrolled ? 'var(--olive)' : 'rgba(247,245,242,0.65)' }}
-            >
-              DHANLAXMI
+    <>
+      <header className={`navbar ${scrolled || alwaysDark ? 'scrolled' : ''}`}>
+        <div className="container-luxury flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="flex flex-col leading-none group">
+            <span className={`font-cinzel text-sm tracking-[0.22em] uppercase transition-colors duration-300 ${scrolled || alwaysDark ? 'text-charcoal' : 'text-ivory-light'}`}>
+              Dhanlaxmi
             </span>
-            <span
-              className="text-[0.95rem] font-semibold tracking-[0.12em] transition-colors duration-300"
-              style={{
-                fontFamily: 'var(--font-heading)',
-                color: isScrolled ? 'var(--charcoal)' : 'var(--ivory)',
-              }}
-            >
-              ASSOCIATES
+            <span className={`font-mono text-[0.6rem] tracking-[0.3em] uppercase transition-colors duration-300 ${scrolled || alwaysDark ? 'text-stone' : 'text-ivory/70'}`}>
+              Associates
             </span>
-            {/* Gold underline — fades in as scrolled */}
-            <span
-              className="absolute -bottom-1 left-0 right-0 h-[1.5px] rounded-full transition-opacity duration-500"
-              style={{
-                background: 'linear-gradient(90deg, var(--gold), var(--gold-light), transparent)',
-                opacity: dividerOpacity * 0.7,
-              }}
-            />
-          </div>
-        </Link>
+          </Link>
 
-        {/* ── Desktop Nav ── */}
-        <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className="group relative py-1 text-[0.78rem] font-medium tracking-[0.04em] transition-colors duration-300"
-              style={({ isActive }) => ({
-                color: isScrolled
-                  ? isActive ? 'var(--charcoal)' : 'var(--olive)'
-                  : isActive ? 'var(--ivory)' : 'rgba(247,245,242,0.75)',
-                textDecoration: 'none',
-              })}
-            >
-              {({ isActive }) => (
-                <>
-                  {item.label}
-                  {/* Gold underline indicator */}
-                  <span
-                    className="absolute -bottom-1 left-0 h-[1.5px] rounded-full transition-all duration-400"
-                    style={{
-                      background: 'var(--gold)',
-                      width: isActive ? '100%' : '0%',
-                    }}
-                  />
-                  {/* Hover underline */}
-                  <span
-                    className="absolute -bottom-1 left-0 h-[1.5px] rounded-full scale-x-0 transition-transform duration-300 origin-left group-hover:scale-x-100"
-                    style={{
-                      background: isScrolled ? 'var(--gold)' : 'rgba(247,245,242,0.6)',
-                      display: !isActive ? 'block' : 'none',
-                    }}
-                  />
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* ── CTA + Hamburger ── */}
-        <div className="flex items-center gap-3">
-          {/* Enquire CTA — changes style with scroll */}
-          <motion.button
-            type="button"
-            onClick={onEnquire}
-            className="hidden items-center gap-2 rounded-full text-[0.72rem] font-medium tracking-[0.06em] uppercase sm:inline-flex"
-            style={{
-              padding: '0.6rem 1.4rem',
-              background: isScrolled
-                ? 'var(--gold)'
-                : 'rgba(255,255,255,0.12)',
-              color: 'var(--white)',
-              border: isScrolled
-                ? '1.5px solid var(--gold)'
-                : '1.5px solid rgba(255,255,255,0.4)',
-              backdropFilter: isScrolled ? 'none' : 'blur(8px)',
-              transition: 'all 0.4s cubic-bezier(0.22,1,0.36,1)',
-            }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            Book Site Visit
-          </motion.button>
-
-          {/* Hamburger — mobile */}
-          <button
-            type="button"
-            onClick={onMenu}
-            aria-label="Open navigation menu"
-            className="flex h-10 w-10 flex-col items-center justify-center gap-[5px] rounded-xl transition-all duration-300 lg:hidden"
-            style={{
-              background: isScrolled ? 'var(--white)' : 'rgba(255,255,255,0.08)',
-              border: '1px solid',
-              borderColor: isScrolled ? 'rgba(198,166,106,0.2)' : 'rgba(255,255,255,0.25)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="block rounded-full transition-colors duration-300"
-                style={{
-                  height: '1.5px',
-                  width: i === 1 ? '1rem' : '1.25rem',
-                  background: isScrolled ? 'var(--charcoal)' : 'rgba(247,245,242,0.9)',
-                  opacity: i === 1 ? 0.6 : 1,
-                }}
-              />
+          {/* Desktop nav */}
+          <nav className="hidden lg:flex items-center gap-10">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={`navbar-link ${location.pathname === link.href ? 'active' : ''} ${scrolled || alwaysDark ? '!text-charcoal-light' : ''}`}
+              >
+                {link.label}
+              </Link>
             ))}
-          </button>
+          </nav>
+
+          {/* CTA + Hamburger */}
+          <div className="flex items-center gap-6">
+            <Link
+              to="/contact"
+              className={`hidden lg:inline-flex items-center gap-2 text-xs tracking-[0.12em] uppercase font-body border px-5 py-2.5 rounded-sm transition-all duration-400 ease-luxury ${
+                scrolled || alwaysDark
+                  ? 'border-charcoal text-charcoal hover:bg-charcoal hover:text-ivory-light'
+                  : 'border-ivory/60 text-ivory hover:bg-ivory/10'
+              }`}
+            >
+              Enquire
+            </Link>
+
+            {/* Hamburger */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={`lg:hidden flex flex-col justify-center gap-1.5 w-8 h-8 transition-colors duration-300 ${scrolled || alwaysDark ? 'text-charcoal' : 'text-ivory'}`}
+              aria-label="Toggle menu"
+            >
+              <motion.span
+                className="block h-px w-full bg-current origin-center"
+                animate={menuOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              />
+              <motion.span
+                className="block h-px w-full bg-current"
+                animate={menuOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+                transition={{ duration: 0.25 }}
+              />
+              <motion.span
+                className="block h-px w-full bg-current origin-center"
+                animate={menuOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </button>
+          </div>
         </div>
-      </div>
-    </motion.header>
-  )
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-charcoal/40 backdrop-blur-sm z-[998]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMenuOpen(false)}
+            />
+            <motion.div
+              className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-sm bg-ivory-light z-[999] flex flex-col"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {/* Close */}
+              <div className="flex justify-between items-center px-8 pt-8 pb-10">
+                <span className="font-cinzel text-sm tracking-[0.2em] text-charcoal uppercase">Menu</span>
+                <button onClick={() => setMenuOpen(false)} className="w-8 h-8 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M1 1L17 17M17 1L1 17" stroke="currentColor" strokeWidth="1.5"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Links */}
+              <nav className="flex flex-col px-8 gap-1 flex-1">
+                {navLinks.map((link, i) => (
+                  <motion.div
+                    key={link.href}
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <Link
+                      to={link.href}
+                      className={`block py-4 border-b border-mist font-display text-3xl font-light tracking-tight text-charcoal hover:text-sage-deep transition-colors duration-300 ${location.pathname === link.href ? 'text-sage-deep' : ''}`}
+                    >
+                      {link.label}
+                    </Link>
+                  </motion.div>
+                ))}
+              </nav>
+
+              {/* Footer strip */}
+              <div className="px-8 pb-10 pt-6">
+                <p className="font-mono text-[0.625rem] tracking-[0.2em] text-stone uppercase mb-3">Get in touch</p>
+                <a href="tel:+919999999999" className="block font-body text-sm text-charcoal hover:text-sage-deep transition-colors">+91 99999 99999</a>
+                <a href="mailto:info@dhanlaxmi.in" className="block font-body text-sm text-stone mt-1 hover:text-sage-deep transition-colors">info@dhanlaxmi.in</a>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
 }

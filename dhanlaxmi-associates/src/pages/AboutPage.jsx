@@ -1,215 +1,280 @@
-import { Link, useOutletContext } from 'react-router-dom'
-import { Reveal } from '../components/Reveal.jsx'
-import { AnimatedCounter } from '../components/AnimatedCounter.jsx'
+import { useRef, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { TextReveal } from '../components/motion/TextReveal';
+import { CountUp } from '../components/motion/CountUp';
+import { ImageReveal } from '../components/motion/ImageReveal';
 
-const timeline = [
-  { year: '2005', title: 'Founded', desc: 'Dhanlaxmi Associates established in Pune with a vision for premium residential development.' },
-  { year: '2010', title: 'First Major Project', desc: 'Delivered our first landmark residential complex in Kothrud — setting the benchmark.' },
-  { year: '2016', title: 'Expansion', desc: 'Extended portfolio to Erandwane and Baner — Pune\'s most coveted residential corridors.' },
-  { year: '2020', title: 'RERA Certified', desc: 'Full RERA compliance established. Transparency and trust cemented as core values.' },
-  { year: '2024', title: 'Today', desc: 'Ongoing landmark projects, 500Cr+ delivered, and a reputation built on integrity.' },
-]
+gsap.registerPlugin(ScrollTrigger);
 
 const values = [
-  { icon: '◈', title: 'Quality First', desc: 'Every material, every detail — curated for durability and elegance.' },
-  { icon: '◉', title: 'Transparency', desc: 'RERA-registered, clear pricing, no hidden costs — ever.' },
-  { icon: '◇', title: 'Client-Centric', desc: 'Your vision drives our design. Your timeline defines our delivery.' },
-  { icon: '◆', title: 'Legacy Building', desc: 'We build homes for generations — not just structures.' },
-]
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9,22 9,12 15,12 15,22"/>
+      </svg>
+    ),
+    title: 'Family First',
+    body: 'Every home is built thinking of the families who will live, grow, and create memories within its walls.',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    ),
+    title: 'Uncompromising Quality',
+    body: 'We use materials that outlast market trends — built to standards that exceed what regulations require.',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+    ),
+    title: 'On-Time Delivery',
+    body: 'We honour our commitments. Every project delivered within agreed timelines, without compromise.',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+    title: 'Transparency Always',
+    body: 'From pricing to RERA compliance — every aspect of our business is conducted with complete transparency.',
+  },
+];
+
+const timeline = [
+  { year: '2008', event: 'Dhanlaxmi Associates founded in Kothrud, Pune with a vision to build quality homes.' },
+  { year: '2012', event: 'Completed first major residential complex — setting a new standard for the area.' },
+  { year: '2016', event: 'Expanded to deliver over 5 projects, earning trust from 200+ families.' },
+  { year: '2019', event: 'First RERA-registered project in Kothrud, reinforcing commitment to transparency.' },
+  { year: '2023', event: 'Launched OM Building — our most ambitious project to date.' },
+  { year: 'Today', event: 'Over 500 families housed. More projects in the pipeline.' },
+];
 
 export function AboutPage() {
-  const modal = useOutletContext()
+  const timelineRef = useRef(null);
+
+  useEffect(() => {
+    if (!timelineRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.timeline-line', {
+        scaleY: 0,
+        transformOrigin: 'top center',
+        duration: 2,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: timelineRef.current,
+          start: 'top 80%',
+          toggleActions: 'play none none none',
+        },
+      });
+    }, timelineRef);
+    return () => ctx.revert();
+  }, []);
 
   return (
-    <div style={{ background: 'var(--ivory)' }}>
+    <>
+      <Helmet>
+        <title>About Us — Dhanlaxmi Associates</title>
+        <meta name="description" content="Learn about Dhanlaxmi Associates — our founding story, philosophy, and the values that have guided us for over 15 years in Pune's residential real estate." />
+      </Helmet>
 
-      {/* ── Page Hero ── */}
-      <section className="relative overflow-hidden" style={{ background: 'var(--charcoal)', minHeight: '52vh' }}>
-        <div className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse at 25% 60%, rgba(198,166,106,0.12), transparent 55%)' }} />
-        <div className="gold-shimmer-line absolute bottom-0 left-0 right-0" />
-        <div className="container-x relative flex min-h-[52vh] flex-col justify-end pb-16 pt-24">
-          <Reveal direction="up">
-            <div className="section-label">
-              <span className="kicker" style={{ color: 'var(--gold)' }}>Our Story</span>
-            </div>
-            <h1 className="mb-4 max-w-2xl" style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.5rem, 6vw, 5rem)',
-              fontWeight: 400,
-              letterSpacing: '-0.02em',
-              color: 'var(--ivory)',
-              lineHeight: 1.05,
-            }}>
-              Building More Than Homes
-            </h1>
-            <p className="max-w-xl text-sm leading-relaxed" style={{ color: 'rgba(247,245,242,0.55)' }}>
-              Two decades of crafting premium residential spaces in Pune — guided by trust, quality, and a relentless commitment to excellence.
-            </p>
-          </Reveal>
+      {/* ── Hero ──────────────────────────── */}
+      <section className="relative min-h-[70vh] flex items-end overflow-hidden bg-charcoal">
+        {/* Architectural grid */}
+        <div className="absolute inset-0 opacity-8" style={{
+          backgroundImage: `linear-gradient(rgba(138,158,140,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(138,158,140,0.2) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(37,35,32,0.95) 0%, rgba(37,35,32,0.5) 60%, transparent 100%)' }} />
+        <div className="relative z-10 container-luxury pb-20 pt-40">
+          <div className="section-label !text-sage mb-8">About Us</div>
+          <TextReveal
+            as="h1"
+            className="font-display text-fluid-6xl text-ivory font-light leading-none tracking-tight max-w-3xl"
+          >
+            Fifteen years of building what matters most
+          </TextReveal>
         </div>
       </section>
 
-      {/* ── Company Story ── */}
-      <section className="section-py" aria-label="Company story">
-        <div className="container-x grid gap-12 lg:grid-cols-2 lg:items-center">
-          <Reveal direction="left">
-            <div>
-              <div className="section-label"><span className="kicker">Who We Are</span></div>
-              <h2 className="heading-xl mb-6">A Calm, Premium Process</h2>
-              <p className="mb-4 text-sm leading-relaxed" style={{ color: 'var(--olive)' }}>
-                Dhanlaxmi Associates was founded on the belief that luxury isn't only about finishes — it's about the entire experience. From the first site visit to key handover, we keep the journey refined, personal, and transparent.
+      {/* ── Story ──────────────────────────── */}
+      <section className="section-padding bg-ivory">
+        <div className="container-luxury grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+          <div>
+            <div className="section-label mb-8">Our Story</div>
+            <TextReveal
+              as="h2"
+              className="font-display text-fluid-4xl text-charcoal font-light leading-tight mb-8"
+              trigger="section"
+            >
+              Built on a foundation of trust
+            </TextReveal>
+            <div className="flex flex-col gap-5 font-body text-stone-dark text-fluid-base leading-relaxed">
+              <p>
+                Dhanlaxmi Associates was born in 2008 from a simple conviction: that every Pune family deserves a home that is built honestly, designed thoughtfully, and delivered with integrity. What began as a small construction firm in Kothrud has grown into one of the area's most trusted residential developers.
               </p>
-              <p className="mb-4 text-sm leading-relaxed" style={{ color: 'var(--olive)' }}>
-                We operate in Pune's most premium micro-markets: Kothrud, Erandwane, Baner, and Aundh — areas with strong infrastructure, connectivity, and long-term appreciation.
+              <p>
+                Our founder started by building just one home — paying attention to every material, every corner, every decision. That attention to detail became our hallmark, and it remains the standard by which we measure every project today.
               </p>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--olive)' }}>
-                Every project we undertake reflects our commitment to quality construction, elegant design, and client-first values that have earned us the trust of hundreds of premium buyers.
+              <p>
+                Over fifteen years, we have housed over 500 families across 10+ projects. We take pride not in the scale of what we build, but in the quality of what we deliver.
               </p>
             </div>
-          </Reveal>
-
-          <Reveal direction="right" delay={0.1}>
-            <div className="relative overflow-hidden rounded-3xl" style={{ aspectRatio: '4/3' }}>
-              <img
-                src="/images/project_hero.png"
-                alt="Dhanlaxmi Associates premium project"
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
-              <div className="absolute inset-0"
-                style={{ background: 'linear-gradient(to top, rgba(46,46,46,0.5), transparent)' }} />
-              <div className="absolute bottom-6 left-6 glass-card px-5 py-4">
-                <div className="kicker mb-1">RERA No.</div>
-                <div className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>P52100099881</div>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── Stats ── */}
-      <section style={{ background: 'var(--beige)' }} className="py-14">
-        <div className="container-x grid grid-cols-2 gap-6 lg:grid-cols-4">
-          {[
-            { value: 15, suffix: '+', label: 'Years of Experience' },
-            { value: 30, suffix: '+', label: 'Projects Delivered' },
-            { value: 98, suffix: '%', label: 'Client Satisfaction' },
-            { value: 500, suffix: 'Cr+', prefix: '₹', label: 'Delivered Value' },
-          ].map((s, i) => (
-            <Reveal key={s.label} delay={i * 0.07}>
-              <div className="luxury-card p-7 text-center">
-                <div className="mb-1" style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '2.2rem',
-                  fontWeight: 400,
-                  color: 'var(--gold)',
-                }}>
-                  {s.prefix && <span>{s.prefix}</span>}
-                  <AnimatedCounter value={s.value} suffix="" decimals={0} duration={2} />
-                  <span>{s.suffix}</span>
-                </div>
-                <div className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--olive)' }}>{s.label}</div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Vision & Mission ── */}
-      <section className="section-py" aria-label="Vision and mission">
-        <div className="container-x grid gap-6 md:grid-cols-2">
-          <Reveal direction="left">
-            <div className="luxury-card h-full p-8" style={{ border: '1px solid rgba(198,166,106,0.2)', background: 'var(--white)' }}>
-              <div className="kicker mb-3">Vision</div>
-              <h3 className="heading-md mb-4">To Lead Luxury Development in Pune</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--olive)' }}>
-                We envision a Pune where every premium buyer has access to curated, high-quality residential projects — delivered with complete transparency and class-leading client service.
-              </p>
-              <div className="mt-6 h-[2px] w-12" style={{ background: 'var(--gold)' }} />
-            </div>
-          </Reveal>
-          <Reveal direction="right" delay={0.1}>
-            <div className="luxury-card h-full p-8" style={{ border: '1px solid rgba(198,166,106,0.2)', background: 'var(--white)' }}>
-              <div className="kicker mb-3">Mission</div>
-              <h3 className="heading-md mb-4">Deliver Premium Living Experiences</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--olive)' }}>
-                Our mission is to craft residences that combine thoughtful design, prime locations, and durable construction — making luxury accessible and the buying experience exceptional.
-              </p>
-              <div className="mt-6 h-[2px] w-12" style={{ background: 'var(--gold)' }} />
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── Timeline ── */}
-      <section style={{ background: 'var(--charcoal)' }} className="section-py" aria-label="Company timeline">
-        <div className="container-x">
-          <Reveal>
-            <div className="section-label"><span className="kicker" style={{ color: 'var(--gold)' }}>Our Journey</span></div>
-            <h2 className="heading-xl mb-12" style={{ color: 'var(--ivory)' }}>Milestones & Legacy</h2>
-          </Reveal>
+          </div>
+          {/* Visual */}
           <div className="relative">
-            {/* Vertical line */}
-            <div className="absolute left-[1.85rem] top-0 bottom-0 w-[1px] hidden sm:block"
-              style={{ background: 'linear-gradient(to bottom, var(--gold), rgba(198,166,106,0.1))' }} />
-            <div className="space-y-10">
-              {timeline.map((item, i) => (
-                <Reveal key={item.year} delay={i * 0.08}>
-                  <div className="flex gap-6 items-start">
-                    <div className="shrink-0 flex h-14 w-14 flex-col items-center justify-center rounded-full border text-xs font-semibold z-10"
-                      style={{ background: 'var(--charcoal)', borderColor: 'var(--gold)', color: 'var(--gold)' }}>
-                      {item.year}
-                    </div>
-                    <div className="pt-3">
-                      <div className="mb-1 text-sm font-semibold" style={{ color: 'var(--gold-light)' }}>{item.title}</div>
-                      <p className="text-sm leading-relaxed" style={{ color: 'rgba(247,245,242,0.55)' }}>{item.desc}</p>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
+            <ImageReveal className="rounded-sm aspect-[4/5]">
+              <div className="w-full h-full bg-gradient-to-br from-sage-mist via-sage/20 to-ivory-dark flex items-center justify-center" style={{ minHeight: '480px' }}>
+                <div className="text-center p-8">
+                  <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="mx-auto mb-6">
+                    <rect x="24" y="40" width="8" height="24" fill="#8A9E8C"/>
+                    <rect x="36" y="28" width="8" height="36" fill="#4E6652"/>
+                    <rect x="48" y="34" width="8" height="30" fill="#8A9E8C"/>
+                    <polyline points="18,44 40,22 62,38" fill="none" stroke="#4E6652" strokeWidth="2"/>
+                    <line x1="16" y1="64" x2="64" y2="64" stroke="#D4CEC6" strokeWidth="1.5"/>
+                  </svg>
+                  <p className="font-display text-2xl text-charcoal font-light">Est. 2008</p>
+                  <p className="font-mono text-[0.625rem] tracking-[0.2em] uppercase text-stone mt-2">Kothrud, Pune</p>
+                </div>
+              </div>
+            </ImageReveal>
+            {/* Floating stat */}
+            <div className="absolute -bottom-6 -left-6 bg-charcoal text-ivory p-6 rounded-sm hidden lg:block">
+              <CountUp end={500} suffix="+" className="font-display text-4xl font-light block" />
+              <span className="font-mono text-[0.6rem] tracking-[0.2em] uppercase text-stone-light">Families Housed</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Values ── */}
-      <section className="section-py" aria-label="Company values">
-        <div className="container-x">
-          <Reveal>
-            <div className="section-label"><span className="kicker">Our Values</span></div>
-            <h2 className="heading-xl mb-12">What We Stand For</h2>
-          </Reveal>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── Values ──────────────────────────── */}
+      <section className="section-padding bg-ivory-dark">
+        <div className="container-luxury">
+          <div className="text-center mb-16">
+            <div className="section-label justify-center mb-6">Our Values</div>
+            <TextReveal
+              as="h2"
+              className="font-display text-fluid-4xl text-charcoal font-light leading-tight"
+              trigger="section"
+            >
+              The principles we build by
+            </TextReveal>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((v, i) => (
-              <Reveal key={v.title} delay={i * 0.07}>
-                <div className="luxury-card p-7 text-center group">
-                  <div className="mb-4 text-3xl" style={{ color: 'var(--gold)' }}>{v.icon}</div>
-                  <h3 className="heading-md mb-3">{v.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--olive)' }}>{v.desc}</p>
+              <motion.div
+                key={v.title}
+                className="flex flex-col gap-5 p-7 bg-ivory rounded-sm border border-mist group hover:border-sage transition-colors duration-400"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
+              >
+                <div className="w-12 h-12 rounded-full bg-sage-mist flex items-center justify-center text-sage group-hover:bg-sage group-hover:text-ivory transition-all duration-400">
+                  {v.icon}
                 </div>
-              </Reveal>
+                <div>
+                  <h3 className="font-display text-lg text-charcoal font-light mb-2">{v.title}</h3>
+                  <p className="font-body text-xs text-stone leading-relaxed">{v.body}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section style={{ background: 'var(--beige)' }} className="py-16" aria-label="Contact CTA">
-        <div className="container-x text-center">
-          <Reveal>
-            <div className="kicker mb-3">Get In Touch</div>
-            <h2 className="heading-xl mb-4">Start Your Luxury Journey</h2>
-            <p className="mx-auto mb-8 max-w-lg text-sm leading-relaxed" style={{ color: 'var(--olive)' }}>
-              Whether you're investing or moving in — let's find the right project for your lifestyle.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button type="button" onClick={() => modal.openForProject('')} className="btn-gold">Book a Site Visit</button>
-              <Link to="/contact" className="btn-outline-gold">Contact Us</Link>
-            </div>
-          </Reveal>
+      {/* ── Timeline ──────────────────────────── */}
+      <section ref={timelineRef} className="section-padding bg-ivory overflow-hidden">
+        <div className="container-luxury">
+          <div className="section-label mb-8">Journey</div>
+          <TextReveal
+            as="h2"
+            className="font-display text-fluid-4xl text-charcoal font-light leading-tight mb-16 max-w-xl"
+            trigger="section"
+          >
+            Milestones that shaped who we are
+          </TextReveal>
+
+          <div className="relative pl-8 md:pl-0">
+            {/* Vertical line */}
+            <div className="timeline-line absolute left-3 md:left-1/2 top-0 bottom-0 w-px bg-mist" style={{ transformOrigin: 'top' }} />
+
+            {timeline.map((item, i) => (
+              <motion.div
+                key={item.year}
+                className={`relative flex flex-col md:flex-row gap-6 md:gap-12 mb-12 ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}
+                initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: i * 0.05 }}
+              >
+                {/* Dot */}
+                <div className="absolute left-0 md:left-1/2 top-2 w-2.5 h-2.5 rounded-full bg-sage border-2 border-ivory -translate-x-[4px] md:-translate-x-1/2" />
+
+                {/* Year */}
+                <div className={`md:w-5/12 ${i % 2 === 0 ? 'md:text-right' : 'md:text-left'}`}>
+                  <span className="font-mono text-[0.7rem] tracking-[0.2em] uppercase text-sage">{item.year}</span>
+                </div>
+
+                {/* Content */}
+                <div className="md:w-5/12">
+                  <p className="font-body text-stone-dark text-sm leading-relaxed">{item.event}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
-    </div>
-  )
+
+      {/* ── Founder Quote ──────────────────────────── */}
+      <section className="section-padding bg-charcoal">
+        <div className="container-luxury">
+          <div className="max-w-3xl mx-auto text-center">
+            <svg width="32" height="24" viewBox="0 0 32 24" fill="none" className="mx-auto mb-8 text-sage opacity-60">
+              <path d="M0 24V14C0 8 3 3 9 0l3 4C9 5.5 7 8 7 12h5v12H0zm18 0V14c0-6 3-11 9-14l3 4c-3 1.5-5 4.5-5 8.5h5V24H18z" fill="currentColor"/>
+            </svg>
+            <TextReveal
+              as="blockquote"
+              className="font-display text-fluid-3xl text-ivory font-light leading-relaxed italic mb-8"
+              trigger="section"
+            >
+              We don't just build buildings. We build the places where children take their first steps, where families celebrate their milestones, where lives unfold. That is the responsibility we carry, and we take it seriously.
+            </TextReveal>
+            <div className="flex flex-col items-center gap-1">
+              <span className="block w-8 h-px bg-sage mx-auto mb-4" />
+              <p className="font-cinzel text-sm tracking-[0.18em] text-ivory uppercase">The Founder</p>
+              <p className="font-mono text-[0.625rem] tracking-[0.2em] text-stone">Dhanlaxmi Associates</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────── */}
+      <section className="section-padding bg-ivory">
+        <div className="container-luxury flex flex-col sm:flex-row items-center justify-between gap-8">
+          <TextReveal
+            as="h2"
+            className="font-display text-fluid-3xl text-charcoal font-light leading-tight max-w-xl"
+            trigger="section"
+          >
+            Let's build something great together
+          </TextReveal>
+          <div className="flex gap-4 flex-shrink-0">
+            <Link to="/projects" className="btn-primary"><span>Our Projects</span></Link>
+            <Link to="/contact" className="btn-outline"><span>Contact Us</span></Link>
+          </div>
+        </div>
+      </section>
+    </>
+  );
 }

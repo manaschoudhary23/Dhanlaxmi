@@ -1,448 +1,519 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import { Swiper, SwiperSlide } from 'swiper/react'
-import { Pagination, Autoplay, A11y } from 'swiper/modules'
-import 'swiper/css'
-import 'swiper/css/pagination'
-import { getProjectBySlug } from '../data/projects.js'
-import { sendEnquiry } from '../lib/sendEnquiry.js'
-import { Reveal } from '../components/Reveal.jsx'
+import { useState, useEffect, useRef } from 'react';
+import { useParams, Link, Navigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import { motion, AnimatePresence } from 'framer-motion';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { getProjectBySlug } from '../data/projects';
+import { TextReveal } from '../components/motion/TextReveal';
+import { ImageReveal } from '../components/motion/ImageReveal';
+import { AmenitiesWheel } from '../components/AmenitiesWheel';
+import { FloorPlanViewer } from '../components/FloorPlanViewer';
+import { GalleryGrid } from '../components/GalleryGrid';
 
-/* ── helpers ─────────────────────────────────────────────── */
-const LOC_GROUPS = [
-  { key: 'transportation', label: 'Transportation', icon: '🚌' },
-  { key: 'healthcare',     label: 'Healthcare',     icon: '🏥' },
-  { key: 'schools',        label: 'Schools & Colleges', icon: '🎓' },
-  { key: 'shopping',       label: 'Shopping',       icon: '🛍️' },
-  { key: 'restaurants',    label: 'Dining',         icon: '🍽️' },
-]
+gsap.registerPlugin(ScrollTrigger);
 
-const AMENITY_ICONS = {
-  CCTV: '📹', Security: '🛡️', Fire: '🔥', Rainwater: '💧',
-  Solar: '☀️', Lift: '🛗', Lobby: '🏛️', Power: '⚡',
-}
-const amenityIcon = (l) => {
-  for (const [k, v] of Object.entries(AMENITY_ICONS)) if (l.includes(k)) return v
-  return '◈'
-}
+/* ─── Lightbox ─────────────────────────────────── */
+function Lightbox({ images, index, onClose }) {
+  const [current, setCurrent] = useState(index);
 
-/* ── lightbox ─────────────────────────────────────────────── */
-function Lightbox({ images, index, onClose, onPrev, onNext }) {
   useEffect(() => {
-    const h = (e) => {
-      if (e.key === 'Escape') onClose()
-      if (e.key === 'ArrowRight') onNext()
-      if (e.key === 'ArrowLeft') onPrev()
-    }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose, onNext, onPrev])
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') setCurrent(c => Math.min(c + 1, images.length - 1));
+      if (e.key === 'ArrowLeft')  setCurrent(c => Math.max(c - 1, 0));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [images.length, onClose]);
+
   return (
-    <motion.div className="fixed inset-0 z-[90] flex items-center justify-center p-4"
-      style={{ background: 'rgba(14,10,4,0.95)', backdropFilter: 'blur(12px)' }}
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <button className="absolute inset-0" onClick={onClose} aria-label="Close" />
-      <motion.div className="relative z-10 w-full max-w-5xl"
-        initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-        <img src={images[index]} alt={`Gallery ${index + 1}`}
-          className="max-h-[80vh] w-full rounded-2xl object-contain" />
-        <div className="mt-4 flex items-center justify-between px-1">
-          <span className="text-sm" style={{ color: 'rgba(247,245,242,0.5)' }}>{index + 1} / {images.length}</span>
-          <div className="flex gap-2">
-            {[['← Prev', onPrev], ['Next →', onNext], ['✕ Close', onClose]].map(([l, fn]) => (
-              <button key={l} onClick={fn}
-                className="rounded-full border px-4 py-2 text-xs text-white transition hover:bg-white/10"
-                style={{ borderColor: 'rgba(255,255,255,0.15)' }}>{l}</button>
-            ))}
-          </div>
-        </div>
-      </motion.div>
+    <motion.div
+      className="fixed inset-0 z-[6000] bg-charcoal/95 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.img
+        key={current}
+        src={images[current]}
+        alt=""
+        className="max-w-[90vw] max-h-[85vh] object-contain rounded-sm"
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        onClick={e => e.stopPropagation()}
+      />
+      {/* Nav */}
+      {current > 0 && (
+        <button
+          className="absolute left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full border border-ivory/20 text-ivory flex items-center justify-center hover:bg-ivory/10 transition-colors"
+          onClick={e => { e.stopPropagation(); setCurrent(c => c - 1); }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      )}
+      {current < images.length - 1 && (
+        <button
+          className="absolute right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full border border-ivory/20 text-ivory flex items-center justify-center hover:bg-ivory/10 transition-colors"
+          onClick={e => { e.stopPropagation(); setCurrent(c => c + 1); }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      )}
+      {/* Close */}
+      <button
+        className="absolute top-6 right-6 w-10 h-10 rounded-full border border-ivory/20 text-ivory flex items-center justify-center hover:bg-ivory/10 transition-colors"
+        onClick={onClose}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      {/* Counter */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 font-mono text-[0.6rem] tracking-widest text-ivory/40">
+        {current + 1} / {images.length}
+      </div>
     </motion.div>
-  )
+  );
 }
 
-/* ── enquiry form ─────────────────────────────────────────── */
-function ProjectEnquiryForm({ project }) {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', unit: project.unitTypes?.[0] || '', message: '', agree: false })
-  const [status, setStatus] = useState({ type: 'idle', message: '' })
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
+/* ─── Sticky Facts Bar ──────────────────────────── */
+function StickyFactsBar({ project }) {
+  const [visible, setVisible] = useState(false);
 
-  async function submit(e) {
-    e.preventDefault()
-    if (!form.name || !form.phone || !form.email || !form.agree)
-      return setStatus({ type: 'error', message: 'Please fill required fields and accept terms.' })
-    if (form.phone.replace(/\D/g, '').length < 10)
-      return setStatus({ type: 'error', message: 'Enter a valid 10-digit phone number.' })
-    if (!/^\S+@\S+\.\S+$/.test(form.email))
-      return setStatus({ type: 'error', message: 'Enter a valid email address.' })
-    try {
-      setStatus({ type: 'loading', message: 'Submitting…' })
-      await sendEnquiry({
-        fullName: form.name, phone: form.phone, email: form.email,
-        projectInterestedIn: `${project.name} (${form.unit})`,
-        subject: `Enquiry – ${project.name}`,
-        message: form.message, source: 'project-detail-page',
-      })
-      setStatus({ type: 'success', message: '✓ Enquiry submitted! We\'ll reach out within 24 hours.' })
-      setForm((f) => ({ ...f, name: '', phone: '', email: '', message: '', agree: false }))
-    } catch {
-      setStatus({ type: 'error', message: 'Something went wrong. Please try again.' })
-    }
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > window.innerHeight * 0.6);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          className="fixed top-[72px] left-0 right-0 z-[400] glass border-b border-mist/40"
+          initial={{ y: -60, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -60, opacity: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="container-luxury py-3 flex flex-wrap items-center gap-6 overflow-x-auto">
+            <span className="font-cinzel text-xs tracking-[0.2em] text-charcoal uppercase flex-shrink-0">{project.name}</span>
+            <span className="w-px h-4 bg-mist flex-shrink-0" />
+            {project.unitTypes?.map((u) => (
+              <span key={u} className="font-mono text-[0.625rem] tracking-widest uppercase text-stone flex-shrink-0">{u}</span>
+            ))}
+            <span className="w-px h-4 bg-mist flex-shrink-0 hidden sm:block" />
+            <span className={`font-mono text-[0.625rem] tracking-widest uppercase flex-shrink-0 px-2 py-0.5 rounded-sm ${project.status === 'Ongoing' ? 'bg-terracotta/20 text-terracotta' : 'bg-sage-mist text-sage-deep'}`}>
+              {project.status}
+            </span>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ─── Location Card ─────────────────────────────── */
+function LocationCard({ category, items }) {
+  const icons = {
+    transportation: '🚇', healthcare: '🏥', schools: '🎓', shopping: '🛍️', restaurants: '🍽️'
+  };
+  return (
+    <div className="border border-mist rounded-sm p-5 bg-ivory">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-base">{icons[category] || '📍'}</span>
+        <span className="font-mono text-[0.625rem] tracking-[0.2em] uppercase text-stone">{category}</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        {items.map(item => (
+          <div key={item.name} className="flex items-center justify-between">
+            <span className="font-body text-xs text-stone-dark">{item.name}</span>
+            <span className="font-mono text-[0.6rem] tracking-widest text-sage">{item.distance}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Enquiry Form ──────────────────────────────── */
+function EnquiryFormInline({ projectName }) {
+  const [submitted, setSubmitted] = useState(false);
+  const [data, setData] = useState({ name: '', phone: '', email: '', unit: '', message: '' });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Simulate submit
+    setTimeout(() => setSubmitted(true), 500);
+  };
+
+  if (submitted) {
+    return (
+      <motion.div
+        className="text-center py-12"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="w-12 h-12 rounded-full bg-sage-mist flex items-center justify-center mx-auto mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4E6652" strokeWidth="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <p className="font-display text-xl text-charcoal font-light mb-2">Thank you!</p>
+        <p className="font-body text-sm text-stone">Our team will get in touch with you shortly.</p>
+      </motion.div>
+    );
   }
 
-  const inp = 'lux-input'
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--olive)' }}>Name *</label>
-          <input className={inp} placeholder="Full name" value={form.name} onChange={set('name')} />
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="form-field">
+          <label className="form-label">Full Name</label>
+          <input className="form-input" placeholder="Your name" required value={data.name} onChange={e => setData(d => ({...d, name: e.target.value}))} />
         </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--olive)' }}>Phone *</label>
-          <input className={inp} placeholder="+91 9XXXXXXXXX" inputMode="tel" value={form.phone}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/[^\d+]/g, '') }))} />
+        <div className="form-field">
+          <label className="form-label">Phone</label>
+          <input className="form-input" type="tel" placeholder="+91 XXXXX XXXXX" required value={data.phone} onChange={e => setData(d => ({...d, phone: e.target.value}))} />
         </div>
       </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--olive)' }}>Email *</label>
-        <input type="email" className={inp} placeholder="you@example.com" value={form.email} onChange={set('email')} />
+      <div className="form-field">
+        <label className="form-label">Email</label>
+        <input className="form-input" type="email" placeholder="you@email.com" value={data.email} onChange={e => setData(d => ({...d, email: e.target.value}))} />
       </div>
-      {(project.unitTypes || []).length > 0 && (
-        <div>
-          <label className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--olive)' }}>Unit Type</label>
-          <select className="lux-select" value={form.unit} onChange={set('unit')}>
-            {project.unitTypes.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
-        </div>
-      )}
-      <div>
-        <label className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--olive)' }}>Message</label>
-        <textarea className="lux-textarea" placeholder="Budget, preferred floor, schedule…" value={form.message} onChange={set('message')} />
+      <div className="form-field">
+        <label className="form-label">Unit Type of Interest</label>
+        <select className="form-input" value={data.unit} onChange={e => setData(d => ({...d, unit: e.target.value}))}>
+          <option value="">Select unit type</option>
+          <option>2BHK</option>
+          <option>3BHK</option>
+          <option>4BHK</option>
+        </select>
       </div>
-      <label className="flex cursor-pointer items-start gap-3 text-xs" style={{ color: 'var(--olive)' }}>
-        <input type="checkbox" className="mt-0.5" checked={form.agree} onChange={set('agree')}
-          style={{ accentColor: 'var(--gold)' }} />
-        I agree to the <span className="underline underline-offset-2">Terms & Conditions</span> and Privacy Policy.
-      </label>
-      <button type="submit" disabled={status.type === 'loading'} className="btn-gold w-full">
-        {status.type === 'loading' ? 'Submitting…' : 'Submit Enquiry'}
+      <div className="form-field">
+        <label className="form-label">Message (optional)</label>
+        <textarea className="form-input resize-none" rows={3} placeholder="Any specific requirements..." value={data.message} onChange={e => setData(d => ({...d, message: e.target.value}))} />
+      </div>
+      <button type="submit" className="btn-primary self-start">
+        <span>Send Enquiry</span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 2l5 5-5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
       </button>
-      {status.type !== 'idle' && (
-        <motion.p initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-          className="text-xs text-center"
-          style={{ color: status.type === 'success' ? '#4C7257' : status.type === 'error' ? '#c0392b' : 'var(--olive)' }}>
-          {status.message}
-        </motion.p>
-      )}
     </form>
-  )
+  );
 }
 
-/* ── main page ─────────────────────────────────────────────── */
+/* ─── MAIN EXPORT ───────────────────────────────── */
 export function ProjectDetailPage() {
-  const { slug } = useParams()
-  const project = getProjectBySlug(slug)
-  const gallery = useMemo(() => project?.gallery ?? [], [project])
-  const floorPlans = useMemo(() => project?.floorPlans ?? [], [project])
-  const [lightboxIdx, setLightboxIdx] = useState(null)
-  const [fpIdx, setFpIdx] = useState(null)
+  const { slug } = useParams();
+  const project = slug ? getProjectBySlug(slug) : null;
+  const heroRef = useRef(null);
+  const [floorPlanOpen, setFloorPlanOpen] = useState(false);
+  const [floorPlanIndex, setFloorPlanIndex] = useState(0);
+  const [lightboxIndex, setLightboxIndex]   = useState(null);
 
   useEffect(() => {
-    if (!project) return
-    document.title = `${project.name} | Dhanlaxmi Associates`
-    let meta = document.querySelector('meta[name="description"]')
-    if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta) }
-    meta.content = project.description?.slice(0, 160) || ''
-  }, [project])
+    if (!heroRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.to('.detail-hero-bg', {
+        yPercent: 20,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: heroRef.current,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: true,
+        },
+      });
+    });
+    return () => ctx.revert();
+  }, []);
 
-  if (!project) return (
-    <div className="container-x py-24 text-center">
-      <h1 className="heading-lg mb-4">Project Not Found</h1>
-      <Link to="/ongoing-projects" className="btn-gold">← Back to Projects</Link>
-    </div>
-  )
+  if (!project) return <Navigate to="/projects" replace />;
 
-  const heroImage = gallery[0] || '/images/project_hero.png'
-  const unitLabel = project.unitSize || (project.unitTypes || []).join(' / ')
+  const hasGallery   = project.gallery && project.gallery.length > 0;
+  const hasFloorPlans= project.floorPlans && project.floorPlans.length > 0;
+  const hasLocation  = project.locationDetails;
 
   return (
-    <div style={{ background: 'var(--ivory)' }}>
+    <>
+      <Helmet>
+        <title>{project.name} — Dhanlaxmi Associates</title>
+        <meta name="description" content={`${project.name} — ${project.tagline}. RERA: ${project.reraNumber}`} />
+        <meta property="og:title" content={`${project.name} by Dhanlaxmi Associates`} />
+        <meta property="og:description" content={project.description} />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "RealEstateListing",
+          "name": project.name,
+          "description": project.description,
+          "address": { "@type": "PostalAddress", "addressLocality": project.area, "addressRegion": "Pune", "addressCountry": "IN" },
+        })}</script>
+      </Helmet>
 
-      {/* ── Hero Banner ── */}
-      <section className="relative overflow-hidden" style={{ height: '70vh', minHeight: '480px' }} aria-label="Project hero">
-        <img src={heroImage} alt={`${project.name} – exterior view`}
-          className="absolute inset-0 h-full w-full object-cover" loading="eager"
-          style={{ transform: 'scale(1.05)', transformOrigin: 'center' }} />
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(to bottom, rgba(30,24,14,0.2) 0%, rgba(30,24,14,0.6) 60%, rgba(20,16,8,0.9) 100%)'
-        }} />
-        <div className="container-x relative flex h-full flex-col justify-end pb-12">
-          {/* Breadcrumb */}
-          <nav className="mb-5 flex items-center gap-2 text-xs" style={{ color: 'rgba(247,245,242,0.45)' }} aria-label="Breadcrumb">
-            <Link to="/" className="transition hover:text-ivory" style={{ color: 'rgba(247,245,242,0.45)' }}>Home</Link>
-            <span>›</span>
-            <Link to="/ongoing-projects" className="transition hover:text-ivory" style={{ color: 'rgba(247,245,242,0.45)' }}>Projects</Link>
-            <span>›</span>
-            <span style={{ color: 'rgba(247,245,242,0.75)' }}>{project.name}</span>
-          </nav>
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}>
-            <div className="kicker mb-3" style={{ color: 'var(--gold)' }}>Dhanlaxmi Associates</div>
-            <h1 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.2rem, 5vw, 4rem)',
-              fontWeight: 400, letterSpacing: '-0.02em',
-              color: 'var(--ivory)', lineHeight: 1.05,
-            }}>{project.name}</h1>
-            <p className="mt-2 text-sm" style={{ color: 'rgba(247,245,242,0.6)' }}>{project.location}</p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <span className="badge-ongoing">{project.status}</span>
-              {project.reraNumber && (
-                <span className="text-xs px-3 py-1 rounded-full"
-                  style={{ background: 'rgba(247,245,242,0.1)', color: 'rgba(247,245,242,0.6)', border: '1px solid rgba(247,245,242,0.15)' }}>
-                  RERA: {project.reraNumber}
-                </span>
-              )}
-            </div>
-          </motion.div>
+      <StickyFactsBar project={project} />
+
+      {/* ── Hero ─────────────────────────────────── */}
+      <section ref={heroRef} className="relative min-h-screen flex items-end overflow-hidden">
+        <div className="detail-hero-bg absolute inset-0 scale-110">
+          {hasGallery ? (
+            <img src={project.gallery[0]} alt={project.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #2D3A2E 0%, #4E6652 40%, #3D3A36 100%)' }} />
+          )}
+        </div>
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(37,35,32,0.92) 0%, rgba(37,35,32,0.4) 50%, rgba(37,35,32,0.2) 100%)' }} />
+
+        <div className="relative z-10 container-luxury pb-20 pt-40">
+          <div className="section-label !text-sage mb-6">{project.area} · Pune</div>
+          <TextReveal
+            as="h1"
+            className="font-display text-fluid-6xl text-ivory font-light leading-none tracking-tight mb-4 max-w-4xl"
+          >
+            {project.name}
+          </TextReveal>
+          <p className="font-display italic text-fluid-xl text-sage-light font-light mb-8">{project.tagline}</p>
+          <div className="flex flex-wrap gap-6 items-center">
+            <span className={`font-mono text-[0.6rem] tracking-[0.22em] uppercase px-3 py-1.5 rounded-sm ${project.status === 'Ongoing' ? 'bg-terracotta/80 text-ivory' : 'bg-sage/80 text-ivory'}`}>
+              {project.status}
+            </span>
+            <span className="font-mono text-[0.625rem] tracking-widest text-ivory/40 uppercase">RERA: {project.reraNumber}</span>
+          </div>
         </div>
       </section>
 
-      {/* ── Overview Strip ── */}
-      <section style={{ background: 'var(--charcoal)' }} aria-label="Project overview">
-        <div className="container-x py-8">
-          <div className="flex flex-wrap items-center justify-between gap-6">
-            <div className="flex flex-wrap gap-8">
-              {[
-                { l: 'Location', v: project.area },
-                { l: 'Type', v: project.type },
-                { l: 'Units', v: unitLabel },
-                { l: 'Price', v: project.priceLabel },
-              ].map((m) => m.v && (
-                <div key={m.l}>
-                  <div className="text-[10px] font-medium uppercase tracking-[0.2em] mb-0.5" style={{ color: 'rgba(247,245,242,0.4)' }}>{m.l}</div>
-                  <div className="text-sm font-medium" style={{ color: 'var(--ivory)' }}>{m.v}</div>
+      {/* ── Overview ─────────────────────────────── */}
+      <section className="section-padding bg-ivory">
+        <div className="container-luxury grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+          <div className="lg:col-span-7">
+            <div className="section-label mb-8">Overview</div>
+            <TextReveal
+              as="h2"
+              className="font-display text-fluid-4xl text-charcoal font-light leading-tight mb-6"
+              trigger="section"
+            >
+              A residence defined by precision and purpose
+            </TextReveal>
+            <p className="font-body text-stone-dark text-fluid-base leading-relaxed">{project.description}</p>
+          </div>
+          <div className="lg:col-span-4 lg:col-start-9">
+            <div className="bg-ivory-dark rounded-sm p-7 flex flex-col gap-5">
+              <div>
+                <p className="section-label !text-stone mb-2 text-xs">Unit Types</p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {project.unitTypes?.map((u) => (
+                    <span key={u} className="font-mono text-[0.65rem] tracking-widest uppercase px-3 py-1.5 border border-mist rounded-sm text-stone-dark">{u}</span>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <a href={project.brochureUrl || '#'}
-                className="btn-outline-light text-xs" style={{ padding: '0.6rem 1.25rem' }}>
-                ↓ Brochure
+              </div>
+              <div className="w-full h-px bg-mist" />
+              <div>
+                <p className="font-mono text-[0.6rem] tracking-[0.2em] uppercase text-stone mb-1">RERA Number</p>
+                <p className="font-mono text-xs text-charcoal tracking-wide">{project.reraNumber}</p>
+              </div>
+              <div className="w-full h-px bg-mist" />
+              <a
+                href={project.brochureUrl || '#'}
+                className="btn-outline text-center justify-center"
+                download
+              >
+                Download Brochure
               </a>
-              {project.qrCode && (
-                <div className="text-center">
-                  <img src={project.qrCode} alt="QR Code" className="h-16 w-16 rounded-xl object-contain" />
-                </div>
-              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Description ── */}
-      <section className="section-py" style={{ background: 'var(--beige)' }} aria-label="Project description">
-        <div className="container-x">
-          <Reveal>
-            <div className="mx-auto max-w-3xl text-center">
-              <div className="kicker mb-4">About the Project</div>
-              <p style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
-                lineHeight: 1.75,
-                color: 'var(--olive)',
-                fontWeight: 300,
-              }}>
-                {project.description}
+      {/* ── Amenities ────────────────────────────── */}
+      {project.amenities?.length > 0 && (
+        <section className="section-padding bg-ivory-dark">
+          <div className="container-luxury">
+            <div className="text-center mb-16">
+              <div className="section-label justify-center mb-6">Amenities</div>
+              <TextReveal
+                as="h2"
+                className="font-display text-fluid-4xl text-charcoal font-light leading-tight"
+                trigger="section"
+              >
+                Every detail considered
+              </TextReveal>
+            </div>
+            <AmenitiesWheel amenities={project.amenities} />
+          </div>
+        </section>
+      )}
+
+      {/* ── Location ─────────────────────────────── */}
+      {hasLocation && (
+        <section className="section-padding bg-ivory">
+          <div className="container-luxury">
+            <div className="section-label mb-8">Location</div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+              {/* Text */}
+              <div>
+                <TextReveal
+                  as="h2"
+                  className="font-display text-fluid-4xl text-charcoal font-light leading-tight mb-6"
+                  trigger="section"
+                >
+                  Connected to everything that matters
+                </TextReveal>
+                <p className="font-body text-stone-dark text-fluid-base leading-relaxed mb-8">{project.location}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Object.entries(project.locationDetails).map(([cat, items]) => (
+                    <LocationCard key={cat} category={cat} items={items} />
+                  ))}
+                </div>
+                <a
+                  href={project.directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-ghost mt-6 inline-flex"
+                >
+                  <span>Get Directions</span>
+                  <svg className="arrow" width="16" height="10" viewBox="0 0 16 10" fill="none">
+                    <path d="M1 5h14M10 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </a>
+              </div>
+              {/* Map */}
+              <div className="rounded-sm overflow-hidden border border-mist" style={{ height: '480px' }}>
+                <iframe
+                  src={project.mapEmbedUrl}
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  title={`${project.name} location map`}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Floor Plans ──────────────────────────── */}
+      {hasFloorPlans && (
+        <section className="section-padding bg-charcoal">
+          <div className="container-luxury">
+            <div className="section-label !text-sage mb-8">Floor Plans</div>
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-8 mb-12">
+              <TextReveal
+                as="h2"
+                className="font-display text-fluid-4xl text-ivory font-light leading-tight max-w-xl"
+                trigger="section"
+              >
+                Spaces designed for how you live
+              </TextReveal>
+              <p className="font-body text-stone text-fluid-base leading-relaxed max-w-md">
+                Each configuration is thoughtfully planned to maximize natural light, ventilation, and the flow of daily life.
               </p>
             </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── Amenities ── */}
-      <section className="section-py" aria-label="Amenities">
-        <div className="container-x">
-          <Reveal>
-            <div className="section-label"><span className="kicker">Features</span></div>
-            <h2 className="heading-xl mb-10">Amenities & Features</h2>
-          </Reveal>
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-            {(project.amenities || []).map((a, i) => (
-              <Reveal key={a} delay={i * 0.04}>
-                <div className="luxury-card flex flex-col items-center p-6 text-center">
-                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full text-2xl"
-                    style={{ background: 'rgba(198,166,106,0.1)', border: '1px solid rgba(198,166,106,0.2)' }}>
-                    {amenityIcon(a)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {project.floorPlans.map((plan, i) => (
+                <motion.button
+                  key={plan.label}
+                  className="group text-left border border-charcoal-mid rounded-sm p-6 hover:border-sage transition-colors duration-400 bg-charcoal-mid/30"
+                  onClick={() => { setFloorPlanIndex(i); setFloorPlanOpen(true); }}
+                  data-cursor="Open"
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {plan.image && (
+                    <div className="aspect-[4/3] rounded-sm overflow-hidden mb-5 bg-charcoal-mid">
+                      <img src={plan.image} alt={plan.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    </div>
+                  )}
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="font-display text-fluid-xl text-ivory font-light mb-1">{plan.label}</p>
+                      <p className="font-mono text-[0.625rem] tracking-widest text-stone uppercase">{plan.area}</p>
+                    </div>
+                    <div className="w-9 h-9 rounded-full border border-charcoal-mid group-hover:border-sage flex items-center justify-center text-stone group-hover:text-sage transition-all duration-300">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                        <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                      </svg>
+                    </div>
                   </div>
-                  <p className="text-xs font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>{a}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Gallery ── */}
-      {gallery.length > 0 && (
-        <section style={{ background: 'var(--beige)' }} className="py-16" aria-label="Gallery">
-          <div className="container-x mb-8">
-            <Reveal>
-              <div className="section-label"><span className="kicker">Gallery</span></div>
-              <h2 className="heading-xl">Project Gallery</h2>
-            </Reveal>
-          </div>
-          <div className="pl-5 sm:pl-8 lg:pl-[calc((100vw-1280px)/2+3rem)]">
-            <Swiper modules={[Pagination, Autoplay, A11y]} spaceBetween={20} slidesPerView={1.2}
-              pagination={{ clickable: true }} autoplay={{ delay: 4000, disableOnInteraction: true }}
-              a11y={{ prevSlideMessage: 'Previous', nextSlideMessage: 'Next' }}
-              breakpoints={{ 640: { slidesPerView: 1.6 }, 1024: { slidesPerView: 2.4 } }}
-              className="!pb-10">
-              {gallery.map((img, idx) => (
-                <SwiperSlide key={`${img}-${idx}`}>
-                  <button type="button" onClick={() => setLightboxIdx(idx)}
-                    className="group block w-full overflow-hidden rounded-2xl focus:outline-none"
-                    aria-label={`View gallery image ${idx + 1}`}>
-                    <div className="relative overflow-hidden" style={{ aspectRatio: '16/10' }}>
-                      <img src={img} alt={`${project.name} – gallery ${idx + 1}`}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        loading="lazy" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                        style={{ background: 'rgba(46,46,46,0.35)' }}>
-                        <span className="rounded-full px-4 py-2 text-xs font-medium"
-                          style={{ background: 'rgba(247,245,242,0.9)', color: 'var(--charcoal)' }}>View Full ⤢</span>
-                      </div>
-                    </div>
-                  </button>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </section>
-      )}
-
-      {/* ── Floor Plans ── */}
-      {floorPlans.length > 0 && (
-        <section className="section-py" aria-label="Floor plans">
-          <div className="container-x">
-            <Reveal>
-              <div className="section-label"><span className="kicker">Floor Plans</span></div>
-              <h2 className="heading-xl mb-10">Unit Configurations</h2>
-            </Reveal>
-            <div className="grid gap-6 sm:grid-cols-2">
-              {floorPlans.map((plan, idx) => (
-                <Reveal key={plan.code} delay={idx * 0.08}>
-                  <button type="button" onClick={() => setFpIdx(idx)}
-                    className="group w-full text-left" aria-label={`View ${plan.label} floor plan`}>
-                    <div className="luxury-card overflow-hidden">
-                      <div className="overflow-hidden" style={{ aspectRatio: '4/3', background: 'var(--beige)' }}>
-                        <img src={plan.image} alt={`${plan.label} floor plan – ${plan.area}`}
-                          className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy" />
-                      </div>
-                      <div className="p-5 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-semibold" style={{ fontFamily: 'var(--font-heading)', color: 'var(--charcoal)' }}>{plan.label}</div>
-                          <div className="text-xs mt-0.5" style={{ color: 'var(--olive)' }}>{plan.area}</div>
-                        </div>
-                        <span className="text-xs font-medium" style={{ color: 'var(--gold)' }}>View ⤢</span>
-                      </div>
-                    </div>
-                  </button>
-                </Reveal>
+                </motion.button>
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* ── Location ── */}
-      <section style={{ background: 'var(--beige)' }} className="section-py" aria-label="Location and connectivity">
-        <div className="container-x">
-          <Reveal>
-            <div className="section-label"><span className="kicker">Location</span></div>
-            <h2 className="heading-xl mb-10">Location & Connectivity</h2>
-          </Reveal>
-          <div className="grid gap-10 lg:grid-cols-2">
-            <Reveal direction="left">
-              <div className="overflow-hidden rounded-3xl" style={{ height: '420px', border: '1px solid rgba(198,166,106,0.15)' }}>
-                <iframe title={`Map: ${project.name}`} src={project.mapEmbedUrl}
-                  className="h-full w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+      {/* ── Gallery ──────────────────────────────── */}
+      {hasGallery && project.gallery.length > 1 && (
+        <section className="section-padding bg-ivory">
+          <div className="container-luxury">
+            <div className="section-label mb-8">Gallery</div>
+            <TextReveal
+              as="h2"
+              className="font-display text-fluid-4xl text-charcoal font-light leading-tight mb-12"
+              trigger="section"
+            >
+              See it in detail
+            </TextReveal>
+            <GalleryGrid
+              images={project.gallery}
+              onImageClick={(i) => setLightboxIndex(i)}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ── Enquiry CTA ──────────────────────────── */}
+      <section className="section-padding bg-ivory-dark">
+        <div className="container-luxury">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+            <div>
+              <div className="section-label mb-8">Enquire</div>
+              <TextReveal
+                as="h2"
+                className="font-display text-fluid-4xl text-charcoal font-light leading-tight mb-6"
+                trigger="section"
+              >
+                Make this your address
+              </TextReveal>
+              <p className="font-body text-stone-dark leading-relaxed mb-8">
+                Our team is ready to answer your questions, arrange a private site visit, and guide you through the buying journey.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-8 lg:mt-0">
+                <a href="tel:+919999999999" className="btn-primary w-full sm:w-auto justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
+                  </svg>
+                  <span>Call Now</span>
+                </a>
+                <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" className="btn-outline w-full sm:w-auto justify-center" style={{ borderColor: '#25D366', color: '#25D366' }}>
+                  <span>WhatsApp</span>
+                </a>
               </div>
-              <a href={project.directionsUrl} target="_blank" rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--gold)' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
-                Get Directions
-              </a>
-            </Reveal>
-            <Reveal direction="right" delay={0.1}>
-              <div className="grid gap-6 sm:grid-cols-2 content-start">
-                {LOC_GROUPS.map(({ key, label, icon }) => {
-                  const rows = project.locationDetails?.[key] || []
-                  if (!rows.length) return null
-                  return (
-                    <article key={key}>
-                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--gold)' }}>
-                        {icon} {label}
-                      </h3>
-                      <ul className="space-y-2">
-                        {rows.map((item) => (
-                          <li key={item.name} className="flex justify-between text-sm">
-                            <span style={{ color: 'var(--charcoal)' }}>{item.name}</span>
-                            <span className="tabular-nums" style={{ color: 'var(--olive)' }}>{item.distance}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </article>
-                  )
-                })}
-              </div>
-            </Reveal>
+            </div>
+            <div>
+              <EnquiryFormInline projectName={project.name} />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Enquiry Form ── */}
-      <section className="section-py" aria-label="Project enquiry form">
-        <div className="container-x">
-          <Reveal>
-            <div className="mx-auto max-w-2xl">
-              <div className="text-center mb-10">
-                <div className="kicker mb-3">Contact Us</div>
-                <h2 className="heading-xl">Submit an Enquiry</h2>
-                <p className="mt-2 text-sm" style={{ color: 'var(--olive)' }}>
-                  Our team will respond within 24 hours with detailed information.
-                </p>
-              </div>
-              <div className="luxury-card p-8 sm:p-10">
-                <ProjectEnquiryForm project={project} />
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* Gallery Lightbox */}
+      {/* Modals */}
       <AnimatePresence>
-        {lightboxIdx != null && (
-          <Lightbox images={gallery} index={lightboxIdx}
-            onClose={() => setLightboxIdx(null)}
-            onPrev={() => setLightboxIdx((i) => (i - 1 + gallery.length) % gallery.length)}
-            onNext={() => setLightboxIdx((i) => (i + 1) % gallery.length)} />
+        {floorPlanOpen && hasFloorPlans && (
+          <FloorPlanViewer
+            plans={project.floorPlans}
+            initialIndex={floorPlanIndex}
+            onClose={() => setFloorPlanOpen(false)}
+          />
         )}
       </AnimatePresence>
 
-      {/* Floor Plan Lightbox */}
       <AnimatePresence>
-        {fpIdx != null && (
-          <Lightbox images={floorPlans.map((p) => p.image)} index={fpIdx}
-            onClose={() => setFpIdx(null)}
-            onPrev={() => setFpIdx((i) => (i - 1 + floorPlans.length) % floorPlans.length)}
-            onNext={() => setFpIdx((i) => (i + 1) % floorPlans.length)} />
+        {lightboxIndex !== null && hasGallery && (
+          <Lightbox
+            images={project.gallery}
+            index={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+          />
         )}
       </AnimatePresence>
-    </div>
-  )
+    </>
+  );
 }
